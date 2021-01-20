@@ -1,5 +1,9 @@
 {
     "files.associations": {
-        "thread": "cpp"
+        "thread": "cpp",
+        "chrono": "cpp",
+        "mutex": "cpp",
+        "ostream": "cpp",
+        "atomic": "cpp"
     }
 }

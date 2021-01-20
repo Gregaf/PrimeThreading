@@ -1,91 +1,131 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <vector>
 #include <thread>
+#include <atomic>
 
-using namespace std;
+using namespace std::chrono;
 
-// Parmameters make up the range the threads will be supplied with. Along with an array that will be edited.
-void calculatePrimes(int* primes, int start, int end)
+using std::cout;
+using std::endl;
+
+#define NUMBER_OF_THREADS 8
+
+std::atomic<int> counter;
+
+// Given a number, checks whether it is prime.
+bool isPrime(int n)
 {
-    if(start < 2)
-        start = 2;
+    // 0 and 1 are not prime.
+    if(n < 2)
+        return false;
+    // 2 is the only even prime.
+    else if(n == 2)
+        return true;
+    // n must be even which means that n can't be prime.
+    else if(n % 2 == 0) 
+        return false;
 
-    for(int i = start; (i * i) <= end; i++)
+    if(n % 2 == 0 || n % 3 == 0)
+        return false;
+
+    for(int i = 5; (i*i) <= n; i +=6)
     {
-        cout << i << endl;
-        if(primes[i] == 1)
+        if(n % i == 0 || n % (i + 2) == 0)
+            return false;
+    }
+
+    return true;
+}
+
+void calculatePrimes(int* primes, int end)
+{
+    while(counter < end)
+    {
+        if(!isPrime(counter))
         {
-
-            for(int j = (i*i); j <= end; j += i)
-            {
-                primes[j] = 0;
-            }
-
+            primes[counter] = 0;
         }
 
+        counter++;
     }
+    
 
 }
 
-void DoTheStuff()
-{
-    for(int i = 0; i < 5; i++)
-    {
-        cout << i << ", ";
-        cout << "This is thread: " << this_thread::get_id() << endl; 
-    }
-}
 
 
 int main()
 {
-    ofstream myFile;
-    myFile.open("output.txt", ios::out);
+    std::ofstream myFile;
+    myFile.open("output.txt", std::ios::out);
+    std::vector<std::thread> threads;
 
-    int n = 100;
+    int n = 100000000;
     int* primes = new int[n + 1];
     
+    // Intialize all numbers to be considered prime, so we can set them not prime as we go through.
     for(int i = 0; i < n + 1; i++)
     {
         primes[i] = 1;
     }
-
-    thread t1(DoTheStuff);
-    thread t2(DoTheStuff);
-    thread t3(DoTheStuff);
+        
+    auto start = high_resolution_clock::now();
     
-    t1.join();
-    t2.join();
-    t3.join();
+#pragma region Single Thread Execution
+    counter = 1;
 
-    // Label all numbers as prime, as later composite numbers will be marked, where 1 is prime, and 0 is composite.
-    // for(int i = 0; i < n; i++)
-    // {
-    //     primes[i] = 1;
-    // }
+    calculatePrimes(primes, n);
+
+    auto stop = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(stop - start);
     
-    // Each thread will essentially be given a range of numbers to calculate independently
-    // So by supplying the range to those functions and utilizing the isPrime function. They will be marked appropriately and then the sum and such can be found.    
+    cout << "Time taken with singlethreaded: " << (duration.count()) << " miliseconds." << endl;
 
-    //calculatePrimes(primes, 0, n);
+#pragma endregion
+
+
+#pragma region Multithreaded Execution
+    start = high_resolution_clock::now();
     
-    // for(int i = 2; i <= 100; i++)
-    //     if(primes[i] == 1)
-    //     {            
-    //         myFile << i << endl;  
-    //     } 
+    counter = 1;
 
+    // Spawn the threads.
+    for(int i = 0; i < NUMBER_OF_THREADS; i++)
+    {
+        threads.push_back(std::thread(calculatePrimes, primes, n));
+
+    }
+        
+    // Iterate over each thread and join them to the main thread.
+    for(auto& thread : threads)
+    {
+        thread.join();
+    }
+
+    stop = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(stop - start);
+    
+    cout << "Time taken with multithreading: " << (duration.count()) << " miliseconds." << endl;
+#pragma endregion
 
     try
     {
         if(!myFile.is_open())
             throw "Output file is not open, and therefore can't be written to.";
 
+        myFile << '<' << duration.count() << "> ";
+
+        // myFile << '<' << totalPrimes << '> ';
+        // myFile << '<' << sumOfPrimes << '> ';
+        // myFile << '<' << maxPrimes << '> ';
     }
     catch(const char* message)
     {
-        cerr << message << endl;
+        std::cerr << message << endl;
     }
 
     cout << endl;
