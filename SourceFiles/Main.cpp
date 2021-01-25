@@ -13,6 +13,7 @@ using std::endl;
 #define NUMBER_OF_THREADS 8
 
 std::atomic<int> counter;
+std::atomic<int> primeCount;
 
 // Given a number, checks whether it is prime.
 bool isPrime(int n)
@@ -46,7 +47,10 @@ void calculatePrimes(int* primes, int end)
         if(!isPrime(counter))
         {
             primes[counter] = 0;
+
         }
+        else
+            primeCount++;
 
         counter++;
     }
@@ -112,12 +116,32 @@ int main()
     cout << "Time taken with multithreading: " << (duration.count()) << " miliseconds." << endl;
 #pragma endregion
 
+    cout << primeCount << endl;
+
     try
     {
         if(!myFile.is_open())
             throw "Output file is not open, and therefore can't be written to.";
 
         myFile << '<' << duration.count() << "> ";
+
+        int i = n;
+        int maxPrimeCount = 0;
+
+        myFile<< '<';
+
+        while(maxPrimeCount < 10)
+        {
+            if(primes[i] == 1)
+            {
+                myFile << i << ", ";
+                maxPrimeCount++;
+            }
+
+            i--;
+        }
+
+        myFile << '>' << endl;
 
         // myFile << '<' << totalPrimes << '> ';
         // myFile << '<' << sumOfPrimes << '> ';
